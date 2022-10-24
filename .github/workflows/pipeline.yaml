@@ -3,7 +3,7 @@ name: GKE deploy pipeline
 on:
   push:
     branches:
-    - big-bang
+    - approver
 
 jobs:
   test:
@@ -76,6 +76,7 @@ jobs:
     needs:
     - build
     - approval
+    - deploy-to-dev
     with:
       image: ${{ needs.build.outputs.image }}
       service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
@@ -84,8 +85,8 @@ jobs:
       namespace: prod
       manifest-dir: .k8s/prod
       slack-ts: ${{ needs.approval.outputs.ts }}
-      slack-before-message: "${{ needs.approval.outputs.message }}\\n:astronaut: Deploying to production environment... :spinner:"
-      slack-after-message: "${{ needs.approval.outputs.message }}\\n:astronaut: Deployed to production environment successfully."
+      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*\\n:astronaut: Deploying to production environment... :spinner:"
+      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*\\n:astronaut: Deployed to production environment successfully."
       slack-channel-id: C047725Q8VA
       environment: production
     secrets:

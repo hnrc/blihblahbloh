@@ -67,13 +67,26 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
+    - id: fetch-approvals
+      uses: octokit/request-action@v2.x
+      with:
+        route: GET /repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approvals
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - id: extract-approver
+      run: echo "APPROVER=`echo ${{ fromJSON(steps.fetch-approvals.outputs.data)[0].user.login }}`" >> $GITHUB_ENV
+    - run: "echo approver: ${{env.APPROVER}}"
+    - id: set-approver
+      run: echo "BEFORE_MESSAGE=`echo \"${{ inputs.slack-before-message }}\" | sed \"s/:APPROVER:/${{ env.APPROVER }}/g\"`" >> $GITHUB_ENV
+    - run: echo ${{ env.BEFORE_MESSAGE }}
+
     - id: slack-before
       if: inputs.slack-before-message != null
       uses: ./.github/actions/slack-post
       with:
         channel-id: ${{ inputs.slack-channel-id }}
         slack-bot-token: ${{ secrets.slack-bot-token }}
-        message: ${{ inputs.slack-before-message }}
+        message: ${{ env.BEFORE_MESSAGE }}
         ts: ${{ inputs.slack-ts }}
 
     - name: Authenticate with Google Cloud
