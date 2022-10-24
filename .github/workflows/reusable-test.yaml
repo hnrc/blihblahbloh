@@ -20,6 +20,10 @@ on:
       slack-channel-id:
         required: false
         type: string
+      environment:
+        required: false
+        type: string
+        default: default
     secrets:
       slack-bot-token:
         required: false
@@ -33,6 +37,7 @@ jobs:
   test:
     name: Run tests
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     outputs:
       ts: ${{ steps.slack-after.outputs.ts }}
       message: ${{ steps.slack-after.outputs.message }}
