@@ -14,7 +14,7 @@ jobs:
       slack-after-message: ":test_tube: Tests ran successfully."
       slack-channel-id: C047725Q8VA
       test-cmd: sleep 3; echo "Hello, World"
-      environment: build
+      #environment: build
     secrets:
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
 
