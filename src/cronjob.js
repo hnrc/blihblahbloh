@@ -1,0 +1,1 @@
+console.log(`Hello Cronjob [env=${process.env.ENV ?? 'unknown'}]`, new Date().toString());
