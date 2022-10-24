@@ -22,6 +22,10 @@ on:
       slack-channel-id:
         required: false
         type: string
+      environment:
+        required: false
+        type: string
+        default: default
     secrets:
       workload-identity-provider:
         required: true
@@ -39,6 +43,7 @@ jobs:
   build:
     name: Build image
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     permissions:
       contents: read
       id-token: write

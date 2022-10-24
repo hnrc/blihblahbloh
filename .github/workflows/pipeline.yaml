@@ -14,7 +14,6 @@ jobs:
       slack-after-message: ":test_tube: Tests ran successfully."
       slack-channel-id: C047725Q8VA
       test-cmd: sleep 3; echo "Hello, World"
-      #environment: build
     secrets:
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
 
@@ -29,6 +28,7 @@ jobs:
       slack-before-message: "${{ needs.test.outputs.message }}\\n:truck: Building container image... :spinner:"
       slack-after-message: "${{ needs.test.outputs.message }}\\n:truck: Container image built successfully."
       slack-channel-id: C047725Q8VA
+      environment: build
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -48,6 +48,7 @@ jobs:
       slack-before-message: "${{ needs.build.outputs.message }}\\n:rocket: Deploying to development environment... :spinner:"
       slack-after-message: "${{ needs.build.outputs.message }}\\n:rocket: Deployed to development environment successfully."
       slack-channel-id: C047725Q8VA
+      environment: development
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -86,6 +87,7 @@ jobs:
       slack-before-message: "${{ needs.approval.outputs.message }}\\n:astronaut: Deploying to production environment... :spinner:"
       slack-after-message: "${{ needs.approval.outputs.message }}\\n:astronaut: Deployed to production environment successfully."
       slack-channel-id: C047725Q8VA
+      environment: production
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
