@@ -19,12 +19,13 @@ on:
         required: false
         type: string
         default: ''
+      slack-channel-id:
+        required: false
+        type: string
     secrets:
       workload-identity-provider:
         required: true
       slack-bot-token:
-        required: false
-      slack-channel-id:
         required: false
     outputs:
       ts:
@@ -53,7 +54,7 @@ jobs:
       uses: ./.github/actions/slack-post
       with:
         channel-id: ${{ secrets.slack-channel-id }}
-        slack-bot-token: ${{ secrets.slack-bot-token }}
+        slack-bot-token: ${{ inputs.slack-bot-token }}
         message: ${{ inputs.slack-before-message }}
         ts: ${{ inputs.slack-ts }}
 
@@ -88,6 +89,6 @@ jobs:
       uses: ./.github/actions/slack-post
       with:
         channel-id: ${{ secrets.slack-channel-id }}
-        slack-bot-token: ${{ secrets.slack-bot-token }}
+        slack-bot-token: ${{ inputs.slack-bot-token }}
         ts: ${{ steps.slack-before.outputs.ts }}
         message: ${{ inputs.slack-after-message }}

@@ -18,7 +18,7 @@ outputs:
     value: ${{ steps.export-message.outputs.message }}
 
 runs:
-  using: composite 
+  using: composite
   steps:
   - name: Add SHORT_SHA env property with commit short sha
     run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
