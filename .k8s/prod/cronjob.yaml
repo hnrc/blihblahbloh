@@ -15,9 +15,9 @@ spec:
             resources:
               requests:
                 cpu: 0.25
-                memory: 512M
+                memory: .5Gi
               limits:
-                memory: 512M
+                memory: .5Gi
             securityContext:
               runAsNonRoot: true
             env:
