@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: blipblop-cronjob
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: blipblop-cronjob
+            image: gcr.io/sandbox-20221018-qma1i1/blipblop:latest
+            command: ["node", "src/cronjob.js"]
+            securityContext:
+              runAsNonRoot: true
+            env:
+            - name: ENV
+              value: prod
+          restartPolicy: OnFailure
