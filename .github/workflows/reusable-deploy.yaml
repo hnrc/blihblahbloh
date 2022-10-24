@@ -1,0 +1,130 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_call:
+    inputs:
+      service-account:
+        required: true
+        type: string
+      image:
+        required: true
+        type: string
+      cluster-name:
+        required: true
+        type: string
+      location:
+        required: true
+        type: string
+      namespace:
+        required: false
+        type: string
+        default: default
+      manifest-dir:
+        required: false
+        type: string
+        default: .k8s
+      slack-before-message:
+        required: false
+        type: string
+      slack-after-message:
+        required: false
+        type: string
+      slack-ts:
+        required: false
+        type: string
+        default: ''
+    secrets:
+      workload-identity-provider:
+        required: true
+      slack-bot-token:
+        required: false
+      slack-channel-id:
+        required: false
+    outputs:
+      ts:
+        value: ${{ jobs.deploy.outputs.ts }}
+      message:
+        value: ${{ jobs.deploy.outputs.message }}
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+    outputs:
+      ts: ${{ steps.slack-after.outputs.ts }}
+      message: ${{ steps.slack-after.outputs.message }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - id: slack-before
+      if: inputs.slack-before-message != null
+      uses: ./.github/actions/slack-post
+      with:
+        channel-id: ${{ secrets.slack-channel-id }}
+        slack-bot-token: ${{ secrets.slack-bot-token }}
+        message: ${{ inputs.slack-before-message }}
+        ts: ${{ inputs.slack-ts }}
+
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v0
+      with:
+        service_account: ${{ inputs.service-account }}
+        workload_identity_provider: ${{ secrets.workload-identity-provider }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+
+    - name: Fetch Kubernetes credentials
+      uses: google-github-actions/get-gke-credentials@v0
+      with:
+        cluster_name: ${{ inputs.cluster-name }}
+        location: ${{ inputs.location }}
+
+    - name: Deploy to Kubernetes
+      uses: azure/k8s-deploy@v4
+      with:
+        namespace: ${{ inputs.namespace }}
+        pull-images: false
+        manifests: ${{ inputs.manifest-dir }}
+        images: ${{ inputs.image }}
+
+    # - name: Deploy to the Kubernetes cluster
+    #   uses: azure/k8s-deploy@v4
+    #   with:
+    #     namespace: default
+    #     pull-images: false
+    #     strategy: canary
+    #     action: deploy
+    #     percentage: 50
+    #     manifests: |
+    #       .k8s/deployment.yaml
+    #     images: |
+    #       ${{ inputs.image }}:${{ github.sha }}
+
+    # - run: sleep 60
+
+    # - name: Promote canary
+    #   uses: Azure/k8s-deploy@v4
+    #   with:
+    #     namespace: default
+    #     pull-images: false
+    #     strategy: canary
+    #     action: promote
+    #     manifests: |
+    #       .k8s/deployment.yaml
+    #     images: |
+    #       ${{ inputs.image }}:${{ github.sha }}
+
+    - id: slack-after
+      if: inputs.slack-after-message != null
+      uses: ./.github/actions/slack-post
+      with:
+        channel-id: ${{ secrets.slack-channel-id }}
+        slack-bot-token: ${{ secrets.slack-bot-token }}
+        ts: ${{ steps.slack-before.outputs.ts }}
+        message: ${{ inputs.slack-after-message }}

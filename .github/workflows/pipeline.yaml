@@ -1,0 +1,90 @@
+name: GKE deploy pipeline
+
+on:
+  push:
+    branches:
+    - big-bang
+
+jobs:
+  test:
+    name: Test
+    uses: ./.github/workflows/reusable-test.yaml
+    with:
+      slack-before-message: ":test_tube: Running tests... :spinner:"
+      slack-after-message: ":test_tube: Tests ran successfully."
+      test-cmd: sleep 3; echo "Hello, World"
+    secrets:
+      slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+      slack-channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+
+  build:
+    name: Build
+    uses: ./.github/workflows/reusable-build-docker.yaml
+    needs: test
+    with:
+      image: gcr.io/sandbox-20221018-qma1i1/blipblop
+      service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
+      slack-ts: ${{ needs.test.outputs.ts }}
+      slack-before-message: "${{ needs.test.outputs.message }}\\n:truck: Building container image... :spinner:"
+      slack-after-message: "${{ needs.test.outputs.message }}\\n:truck: Container image built successfully."
+    secrets:
+      workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+      slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+      slack-channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+
+  deploy-to-dev:
+    name: Dev
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs: build
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
+      cluster-name: autopilot-cluster-1
+      location: europe-north1
+      namespace: dev
+      manifest-dir: .k8s/dev
+      slack-ts: ${{ needs.build.outputs.ts }}
+      slack-before-message: "${{ needs.build.outputs.message }}\\n:rocket: Deploying to development environment... :spinner:"
+      slack-after-message: "${{ needs.build.outputs.message }}\\n:rocket: Deployed to development environment successfully."
+    secrets:
+      workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+      slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+      slack-channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+
+  approval:
+    name: Approve production
+    runs-on: ubuntu-latest
+    needs: deploy-to-dev
+    outputs:
+      ts: ${{ steps.slack.outputs.ts }}
+      message: ${{ steps.slack.outputs.message }}
+    steps:
+    - uses: actions/checkout@v3
+    - id: slack
+      uses: ./.github/actions/slack-post
+      with:
+        channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        ts: ${{ needs.deploy-to-dev.outputs.ts }}
+        message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: *<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Click to approve>* production deploy."
+
+  deploy-to-prod:
+    name: Prod
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs:
+    - build
+    - approval
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
+      cluster-name: autopilot-cluster-1
+      location: europe-north1
+      namespace: prod
+      manifest-dir: .k8s/prod
+      slack-ts: ${{ needs.approval.outputs.ts }}
+      slack-before-message: "${{ needs.approval.outputs.message }}\\n:astronaut: Deploying to production environment... :spinner:"
+      slack-after-message: "${{ needs.approval.outputs.message }}\\n:astronaut: Deployed to production environment successfully."
+    secrets:
+      workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+      slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+      slack-channel-id: ${{ secrets.SLACK_CHANNEL_ID }}

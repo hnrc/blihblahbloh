@@ -1,0 +1,57 @@
+name: Post/update Slack post
+
+inputs:
+  slack-bot-token:
+    required: true
+  channel-id:
+    required: true
+  message:
+    required: true
+  ts:
+    required: false
+    default: ''
+
+outputs:
+  ts:
+    value: ${{ steps.slack.outputs.ts }}
+  message:
+    value: ${{ steps.export-message.outputs.message }}
+
+runs:
+  using: composite 
+  steps:
+  - name: Add SHORT_SHA env property with commit short sha
+    run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+    shell: bash
+  - name: Post to a Slack channel
+    id: slack
+    uses: slackapi/slack-github-action@v1.23.0
+    with:
+      channel-id: ${{ inputs.channel-id }}
+      update-ts: ${{ inputs.ts }}
+      payload: |
+        {
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Deploy pipeline:*\n${{ inputs.message }}"
+              }
+            },
+            {
+              "type": "context",
+              "elements": [
+                {
+                  "type": "mrkdwn",
+                  "text": "*Repo:* ${{ github.event.repository.name }} *Commit:* ${{ env.SHORT_SHA }} *User:* ${{ github.actor }}"
+                }
+              ]
+            }
+          ]
+        }
+    env:
+      SLACK_BOT_TOKEN: ${{ inputs.slack-bot-token }}
+  - id: export-message
+    run: echo "message=${{ inputs.message }}" >> $GITHUB_OUTPUT
+    shell: bash
