@@ -20,6 +20,7 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/reusable-build-docker.yaml
+    environment: build
     needs: test
     with:
       image: gcr.io/sandbox-20221018-qma1i1/blipblop
@@ -35,6 +36,7 @@ jobs:
   deploy-to-dev:
     name: Dev
     uses: ./.github/workflows/reusable-deploy.yaml
+    environment: development
     needs: build
     with:
       image: ${{ needs.build.outputs.image }}
@@ -71,6 +73,7 @@ jobs:
   deploy-to-prod:
     name: Prod
     uses: ./.github/workflows/reusable-deploy.yaml
+    environment: production
     needs:
     - build
     - approval
