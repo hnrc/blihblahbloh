@@ -1,4 +1,4 @@
-name: Do a pattern replacement in a string
+name: String replace
 
 inputs:
   original:
