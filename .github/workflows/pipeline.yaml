@@ -85,8 +85,8 @@ jobs:
       namespace: prod
       manifest-dir: .k8s/prod
       slack-ts: ${{ needs.approval.outputs.ts }}
-      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*\\n:astronaut: Deploying to production environment... :spinner:"
-      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*\\n:astronaut: Deployed to production environment successfully."
+      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deploying to production environment... :spinner:"
+      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deployed to production environment successfully."
       slack-channel-id: C047725Q8VA
       environment: production
     secrets:
