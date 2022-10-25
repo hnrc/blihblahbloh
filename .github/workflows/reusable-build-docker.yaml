@@ -58,8 +58,8 @@ jobs:
       if: inputs.slack-before-message != null
       uses: ./.github/actions/slack-post
       with:
-        channel-id: ${{ secrets.slack-channel-id }}
-        slack-bot-token: ${{ inputs.slack-bot-token }}
+        channel-id: ${{ inputs.slack-channel-id }}
+        slack-bot-token: ${{ secrets.slack-bot-token }}
         message: ${{ inputs.slack-before-message }}
         ts: ${{ inputs.slack-ts }}
 
@@ -93,7 +93,7 @@ jobs:
       if: inputs.slack-after-message != null
       uses: ./.github/actions/slack-post
       with:
-        channel-id: ${{ secrets.slack-channel-id }}
-        slack-bot-token: ${{ inputs.slack-bot-token }}
+        channel-id: ${{ inputs.slack-channel-id }}
+        slack-bot-token: ${{ secrets.slack-bot-token }}
         ts: ${{ steps.slack-before.outputs.ts }}
         message: ${{ inputs.slack-after-message }}
