@@ -3,7 +3,7 @@ name: GKE deploy pipeline
 on:
   push:
     branches:
-    - approver
+    - big-bang
 
 jobs:
   test:
