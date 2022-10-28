@@ -1,9 +1,9 @@
-name: GKE deploy pipeline
+name: GKE deploy pipeline (basic)
 
 on:
   push:
     branches:
-    - main
+    - nope
 
 jobs:
   test:
