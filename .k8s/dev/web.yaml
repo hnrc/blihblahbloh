@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blipblop-web
+  labels:
+    app: blipblop-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: blipblop-web
+  template:
+    metadata:
+      labels:
+        app: blipblop-web
+    spec:
+      containers:
+      - name: blipblop-web
+        image: gcr.io/sandbox-20221018-qma1i1/blipblop:latest
+        command: ["node", "src/web.js"]
+        resources:
+          requests:
+            cpu: 0.25
+            memory: .5Gi
+          limits:
+            memory: .5Gi
+        ports:
+        - containerPort: 3000
+        securityContext:
+          runAsNonRoot: true
+        env:
+        - name: ENV
+          value: dev
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blipblop-web-service
+spec:
+  selector:
+    app: blipblop-web
+  ports:
+  - protocol: TCP
+    port: 4000
+    targetPort: 3000

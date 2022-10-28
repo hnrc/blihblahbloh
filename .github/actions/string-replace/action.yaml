@@ -1,0 +1,21 @@
+name: String replace
+
+inputs:
+  original:
+    required: true
+  pattern:
+    required: true
+  replacement:
+    required: false
+    default: ''
+
+outputs:
+  replaced:
+    value: ${{ steps.replace.outputs.replaced }}
+
+runs:
+  using: composite
+  steps:
+  - id: replace
+    run: echo "replaced=`echo \"${{ inputs.original }}\" | sed \"s/${{ inputs.pattern }}/${{ inputs.replacement }}/g\"`" >> $GITHUB_OUTPUT
+    shell: bash

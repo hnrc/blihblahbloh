@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blipblop-worker
+  labels:
+    app: blipblop-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blipblop-worker
+  template:
+    metadata:
+      labels:
+        app: blipblop-worker
+    spec:
+      containers:
+      - name: blipblop-worker
+        image: gcr.io/sandbox-20221018-qma1i1/blipblop:latest
+        command: ["node", "src/worker.js"]
+        resources:
+          requests:
+            cpu: 0.25
+            memory: .5Gi
+          limits:
+            memory: .5Gi
+        ports:
+        - containerPort: 3000
+        securityContext:
+          runAsNonRoot: true
+        env:
+        - name: ENV
+          value: prod
