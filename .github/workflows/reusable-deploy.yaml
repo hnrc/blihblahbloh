@@ -40,6 +40,18 @@ on:
         required: false
         type: string
         default: default
+      strategy:
+        required: false
+        type: string
+        default: basic
+      canary-percentage:
+        required: false
+        type: number
+        default: 25
+      traffic-split-method:
+        required: false
+        type: string
+        default: pod
     secrets:
       workload-identity-provider:
         required: true
@@ -109,6 +121,7 @@ jobs:
         location: ${{ inputs.location }}
 
     - name: Deploy to Kubernetes
+      if: inputs.strategy == 'basic'
       uses: azure/k8s-deploy@v4
       with:
         namespace: ${{ inputs.namespace }}
@@ -116,32 +129,48 @@ jobs:
         manifests: ${{ inputs.manifest-dir }}
         images: ${{ inputs.image }}
 
-    # - name: Deploy to the Kubernetes cluster
-    #   uses: azure/k8s-deploy@v4
-    #   with:
-    #     namespace: default
-    #     pull-images: false
-    #     strategy: canary
-    #     action: deploy
-    #     percentage: 50
-    #     manifests: |
-    #       .k8s/deployment.yaml
-    #     images: |
-    #       ${{ inputs.image }}:${{ github.sha }}
+    - name: Deploy to Kubernetes
+      if: inputs.strategy == 'basic'
+      uses: azure/k8s-deploy@v4
+      with:
+        namespace: ${{ inputs.namespace }}
+        pull-images: false
+        manifests: ${{ inputs.manifest-dir }}
+        images: ${{ inputs.image }}
 
-    # - run: sleep 60
+    - name: Deploy canary to Kubernetes
+      if: inputs.strategy == 'canary'
+      uses: azure/k8s-deploy@v4
+      with:
+        namespace: ${{ inputs.namespace }}
+        pull-images: false
+        strategy: canary
+        action: deploy
+        percentage: ${{ inputs.canary-percentage }}
+        manifests: ${{ inputs.manifest-dir }}
+        images: ${{ inputs.image }}
 
-    # - name: Promote canary
-    #   uses: Azure/k8s-deploy@v4
-    #   with:
-    #     namespace: default
-    #     pull-images: false
-    #     strategy: canary
-    #     action: promote
-    #     manifests: |
-    #       .k8s/deployment.yaml
-    #     images: |
-    #       ${{ inputs.image }}:${{ github.sha }}
+    - name: Promote canary
+      if: inputs.strategy == 'canary-promote'
+      uses: Azure/k8s-deploy@v4
+      with:
+        namespace: ${{ inputs.namespace }}
+        pull-images: false
+        strategy: canary
+        action: promote
+        manifests: ${{ inputs.manifest-dir }}
+        images: ${{ inputs.image }}
+
+    - name: Reject canary
+      if: inputs.strategy == 'canary-reject'
+      uses: Azure/k8s-deploy@v4
+      with:
+        namespace: ${{ inputs.namespace }}
+        pull-images: false
+        strategy: canary
+        action: reject
+        manifests: ${{ inputs.manifest-dir }}
+        images: ${{ inputs.image }}
 
     - id: set-approver-after
       uses: ./.github/actions/string-replace
