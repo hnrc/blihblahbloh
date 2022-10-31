@@ -112,6 +112,7 @@ jobs:
       slack-after-message: "${{ needs.observe-metrics.outputs.message }}\\n:astronaut: Deployed to 100% of production environment successfully."
       slack-channel-id: C047725Q8VA
       environment: production-canary
+      is-last-job: true
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -136,6 +137,7 @@ jobs:
       slack-after-message: "${{ needs.observe-metrics.outputs.message }}\\n:no_good: Canary release rejected."
       slack-channel-id: C047725Q8VA
       environment: production-canary
+      is-last-job: true
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
