@@ -1,0 +1,161 @@
+name: Basic contionus delivery GKE pipeline
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+      service-account-build:
+        required: true
+        type: string
+      service-account-dev:
+        required: true
+        type: string
+      service-account-prod:
+        required: true
+        type: string
+      cluster-name-dev:
+        required: true
+        type: string
+      cluster-name-prod:
+        required: true
+        type: string
+      cluster-location-dev:
+        required: true
+        type: string
+      cluster-location-prod:
+        required: true
+        type: string
+      cluster-namespace-dev:
+        required: true
+        type: string
+      cluster-namespace-prod:
+        required: true
+        type: string
+      manifest-dir-dev:
+        required: false
+        type: string
+        default: .k8s/dev
+      manifest-dir-prod:
+        required: false
+        type: string
+        default: .k8s/prod
+      slack-channel-id:
+        required: false
+        type: string
+      test-cmd:
+        required: false
+        type: string
+        default: echo "No test command supplied."
+      gha-environment-build:
+        required: false
+        type: string
+        default: build
+      gha-environment-dev:
+        required: false
+        type: string
+        default: development
+      gha-environment-prod:
+        required: false
+        type: string
+        default: production
+    secrets:
+      slack-bot-token:
+        required: false
+      workload-identity-provider-build:
+        required: true
+      workload-identity-provider-dev:
+        required: true
+      workload-identity-provider-prod:
+        required: true
+
+jobs:
+  test:
+    name: Test
+    uses: ./.github/workflows/reusable-test.yaml
+    with:
+      slack-before-message: ":test_tube: Running tests... :spinner:"
+      slack-after-message: ":test_tube: Tests ran successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      test-cmd: ${{ inputs.test-cmd }}
+      environment: ${{ inputs.gha-environment-build }}
+    secrets:
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  build:
+    name: Build
+    uses: ./.github/workflows/reusable-build-docker.yaml
+    needs: test
+    with:
+      image: ${{ inputs.image }}
+      service-account: ${{ inputs.service-account-build }}
+      slack-ts: ${{ needs.test.outputs.ts }}
+      slack-before-message: "${{ needs.test.outputs.message }}\\n:truck: Building container image... :spinner:"
+      slack-after-message: "${{ needs.test.outputs.message }}\\n:truck: Container image built successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-build }}
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-build }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  deploy-to-dev:
+    name: Dev
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs: build
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: ${{ inputs.service-account-dev }}
+      cluster-name: ${{ inputs.cluster-name-dev }}
+      location: ${{ inputs.cluster-location-dev }}
+      namespace: ${{ inputs.cluster-namespace-dev }}
+      manifest-dir: ${{ inputs.manifest-dir-dev }}
+      slack-ts: ${{ needs.build.outputs.ts }}
+      slack-before-message: "${{ needs.build.outputs.message }}\\n:rocket: Deploying to development environment... :spinner:"
+      slack-after-message: "${{ needs.build.outputs.message }}\\n:rocket: Deployed to development environment successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-dev }}
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-dev }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  approval:
+    name: Approve production
+    runs-on: ubuntu-latest
+    needs: deploy-to-dev
+    outputs:
+      ts: ${{ steps.slack.outputs.ts }}
+      message: ${{ steps.slack.outputs.message }}
+    steps:
+    - uses: actions/checkout@v3
+    - id: slack
+      uses: ./.github/actions/slack-post
+      with:
+        channel-id: ${{ inputs.slack-channel-id }}
+        slack-bot-token: ${{ secrets.slack-bot-token }}
+        ts: ${{ needs.deploy-to-dev.outputs.ts }}
+        message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: *<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Click to approve>* production deploy."
+
+  deploy-to-prod:
+    name: Prod
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs:
+    - build
+    - approval
+    - deploy-to-dev
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: ${{ inputs.service-account-prod }}
+      cluster-name: ${{ inputs.cluster-name-prod }}
+      location: ${{ inputs.cluster-location-prod }}
+      namespace: ${{ inputs.cluster-namespace-prod }}
+      manifest-dir: ${{ inputs.manifest-dir-prod }}
+      slack-ts: ${{ needs.approval.outputs.ts }}
+      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deploying to production environment... :spinner:"
+      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deployed to production environment successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-prod }}
+      is-last-job: true
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-prod }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
