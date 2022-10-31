@@ -3,7 +3,7 @@ name: GKE deploy pipeline (basic)
 on:
   push:
     branches:
-    - nope
+    - canary-cd
 
 jobs:
   test:

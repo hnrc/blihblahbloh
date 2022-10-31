@@ -1,18 +1,12 @@
-name: Build Docker image
+name: Observe metrics
 
 on:
   workflow_call:
     inputs:
-      service-account:
-        required: true
-        type: string
-      image:
-        required: true
-        type: string
-      image-tag:
+      metrics:
         required: false
         type: string
-        default: ${{ github.sha }}
+        default: ''
       slack-before-message:
         required: false
         type: string
@@ -31,29 +25,25 @@ on:
         type: string
         default: default
     secrets:
-      workload-identity-provider:
-        required: true
       slack-bot-token:
         required: false
     outputs:
       ts:
-        value: ${{ jobs.build.outputs.ts }}
+        value: ${{ jobs.observe.outputs.ts }}
       message:
-        value: ${{ jobs.build.outputs.message }}
-      image:
-        value: ${{ inputs.image }}:${{ inputs.image-tag }}
+        value: ${{ jobs.observe.outputs.message }}
+      healthy:
+        value: ${{ jobs.observe.outputs.healthy }}
 
 jobs:
-  build:
-    name: Build image
+  observe:
+    name: Observe metrics
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    permissions:
-      contents: read
-      id-token: write
     outputs:
       ts: ${{ steps.slack-after.outputs.ts }}
       message: ${{ steps.slack-after.outputs.message }}
+      healthy: ${{ steps.evaluation.outputs.healthy }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -67,31 +57,14 @@ jobs:
         message: ${{ inputs.slack-before-message }}
         ts: ${{ inputs.slack-ts }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    - name: Gathering metrics
+      run: echo "Gathering metrics from observability system (mock)"; sleep 30;
 
-    - name: Authenticate with Google Cloud
-      id: auth
-      uses: google-github-actions/auth@v0
-      with:
-        service_account: ${{ inputs.service-account }}
-        workload_identity_provider: ${{ secrets.workload-identity-provider }}
-
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
-
-    - name: Configure Docker
-      run: gcloud --quiet auth configure-docker
-
-    - name: Build and push the Docker image
-      uses: docker/build-push-action@v3
-      with:
-        push: true
-        tags: |
-          ${{ inputs.image }}:${{ inputs.image-tag }}
-          ${{ inputs.image }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+    - name: Evaluating metrics
+      id: evaluation
+      run: |
+        echo "Evaluating metrics (mock)";
+        echo "healthy=$(if [ $(($RANDOM % 2)) -eq 1 ]; then echo "true"; else echo "false"; fi)" >> $GITHUB_OUTPUT
 
     - id: slack-after
       if: inputs.slack-after-message != null
