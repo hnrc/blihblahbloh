@@ -3,7 +3,7 @@ name: GKE deploy pipeline (canary)
 on:
   push:
     branches:
-    - reusable-pipelines
+    - main
 
 jobs:
   pipeline:
