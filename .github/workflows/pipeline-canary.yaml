@@ -23,6 +23,7 @@ jobs:
     needs: test
     with:
       image: gcr.io/sandbox-20221018-qma1i1/blipblop
+      image-tag: canary-${{ github.sha }}
       service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
       slack-ts: ${{ needs.test.outputs.ts }}
       slack-before-message: "${{ needs.test.outputs.message }}\\n:truck: Building container image... :spinner:"
@@ -42,7 +43,7 @@ jobs:
       service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
       cluster-name: autopilot-cluster-1
       location: europe-north1
-      namespace: dev
+      namespace: dev-canary
       manifest-dir: .k8s/dev
       slack-ts: ${{ needs.build.outputs.ts }}
       slack-before-message: "${{ needs.build.outputs.message }}\\n:rocket: Deploying to development environment... :spinner:"
@@ -64,56 +65,73 @@ jobs:
       service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
       cluster-name: autopilot-cluster-1
       location: europe-north1
-      namespace: prod
+      namespace: prod-canary
       manifest-dir: .k8s/prod
       strategy: canary
       canary-percentage: 50
       slack-ts: ${{ needs.deploy-to-dev.outputs.ts }}
-      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deploying canary to production environment... :spinner:"
-      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deploying canary to production environment."
+      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deploying canary to 50% of production environment... :spinner:"
+      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deployed canary to 50% of production environment."
       slack-channel-id: C047725Q8VA
       environment: production-canary
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
 
-  approval:
-    name: Approve production
-    runs-on: ubuntu-latest
+  observe-metrics:
+    name: Observe prod metrics
+    uses: ./.github/workflows/reusable-observe-metrics.yaml
     needs: deploy-canary-to-prod
-    outputs:
-      ts: ${{ steps.slack.outputs.ts }}
-      message: ${{ steps.slack.outputs.message }}
-    steps:
-    - uses: actions/checkout@v3
-    - id: slack
-      uses: ./.github/actions/slack-post
-      with:
-        channel-id: C047725Q8VA
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        ts: ${{ needs.deploy-canary-to-prod.outputs.ts }}
-        message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:vertical_traffic_light: *<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Click to approve>* full-scale production deploy."
+    with:
+      slack-ts: ${{ needs.deploy-canary-to-prod.outputs.ts }}
+      slack-before-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:mag: Analyzing production metrics... :spinner:"
+      slack-after-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:mag: Production metrics analyzed."
+      slack-channel-id: C047725Q8VA
+    secrets:
+      slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
 
   promote-canary-to-prod:
     name: Promote prod canary
+    if: needs.observe-metrics.outputs.healthy == 'true'
     uses: ./.github/workflows/reusable-deploy.yaml
     needs:
     - build
-    - approval
-    - deploy-canary-to-prod
+    - observe-metrics
     with:
       image: ${{ needs.build.outputs.image }}
       service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
       cluster-name: autopilot-cluster-1
       location: europe-north1
-      namespace: prod
+      namespace: prod-canary
       manifest-dir: .k8s/prod
       strategy: canary-promote
-      slack-ts: ${{ needs.approval.outputs.ts }}
-      slack-before-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deploying to production environment... :spinner:"
-      slack-after-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deployed to production environment successfully."
+      slack-ts: ${{ needs.observe-metrics.outputs.ts }}
+      slack-before-message: "${{ needs.observe-metrics.outputs.message }}\\n:astronaut: Deploying to 100% of production environment... :spinner:"
+      slack-after-message: "${{ needs.observe-metrics.outputs.message }}\\n:astronaut: Deployed to 100% of production environment successfully."
       slack-channel-id: C047725Q8VA
-      environment: production-promote
+    secrets:
+      workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+      slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+
+  reject-canary-in-prod:
+    name: Reject prod canary
+    if: needs.observe-metrics.outputs.healthy == 'false'
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs:
+    - build
+    - observe-metrics
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
+      cluster-name: autopilot-cluster-1
+      location: europe-north1
+      namespace: prod-canary
+      manifest-dir: .k8s/prod
+      strategy: canary-reject
+      slack-ts: ${{ needs.observe-metrics.outputs.ts }}
+      slack-before-message: "${{ needs.observe-metrics.outputs.message }}\\n:no_good: Rejecting canary release... :spinner:"
+      slack-after-message: "${{ needs.observe-metrics.outputs.message }}\\n:no_good: Canary release rejected."
+      slack-channel-id: C047725Q8VA
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
