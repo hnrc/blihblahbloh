@@ -1,4 +1,4 @@
-name: GKE deploy pipeline (basic)
+name: GKE deploy pipeline (canary)
 
 on:
   push:
@@ -8,21 +8,24 @@ on:
 jobs:
   pipeline:
     name: Pipeline
-    uses: ./.github/workflows/reusable-pipeline-basic.yaml
+    uses: ./.github/workflows/reusable-pipeline-canary.yaml
     with:
       image: gcr.io/sandbox-20221018-qma1i1/blipblop
       slack-channel-id: C047725Q8VA
+      # Build
       gha-environment-build: build
-      gha-environment-dev: development
-      gha-environment-prod: production
       service-account-build: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
+      # Dev
+      gha-environment-dev: development
       service-account-dev: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
-      service-account-prod: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
       cluster-namespace-dev: dev
-      cluster-namespace-prod: prod
       cluster-location-dev: europe-north1
-      cluster-location-prod: europe-north1
       cluster-name-dev: autopilot-cluster-1
+      #Prod
+      gha-environment-prod: production-canary
+      service-account-prod: blipblop@sandbox-20221018-qma1i1.iam.gserviceaccount.com
+      cluster-namespace-prod: prod
+      cluster-location-prod: europe-north1
       cluster-name-prod: autopilot-cluster-1
     secrets:
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}

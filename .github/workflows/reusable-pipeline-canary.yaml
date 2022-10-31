@@ -1,0 +1,212 @@
+name: Basic contionus delivery GKE pipeline
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+      canary-percentage:
+        required: false
+        type: number
+        default: 10
+      service-account-build:
+        required: true
+        type: string
+      service-account-dev:
+        required: true
+        type: string
+      service-account-prod:
+        required: true
+        type: string
+      cluster-name-dev:
+        required: true
+        type: string
+      cluster-name-prod:
+        required: true
+        type: string
+      cluster-location-dev:
+        required: true
+        type: string
+      cluster-location-prod:
+        required: true
+        type: string
+      cluster-namespace-dev:
+        required: true
+        type: string
+      cluster-namespace-prod:
+        required: true
+        type: string
+      manifest-dir-dev:
+        required: false
+        type: string
+        default: .k8s/dev
+      manifest-dir-prod:
+        required: false
+        type: string
+        default: .k8s/prod
+      slack-channel-id:
+        required: false
+        type: string
+      test-cmd:
+        required: false
+        type: string
+        default: echo "No test command supplied."
+      gha-environment-build:
+        required: false
+        type: string
+        default: build
+      gha-environment-dev:
+        required: false
+        type: string
+        default: development
+      gha-environment-prod:
+        required: false
+        type: string
+        default: production
+    secrets:
+      slack-bot-token:
+        required: false
+      workload-identity-provider-build:
+        required: true
+      workload-identity-provider-dev:
+        required: true
+      workload-identity-provider-prod:
+        required: true
+
+jobs:
+  test:
+    name: Test
+    uses: ./.github/workflows/reusable-test.yaml
+    with:
+      slack-before-message: ":test_tube: Running tests... :spinner:"
+      slack-after-message: ":test_tube: Tests ran successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      test-cmd: ${{ inputs.test-cmd }}
+      environment: ${{ inputs.gha-environment-build }}
+    secrets:
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  build:
+    name: Build
+    uses: ./.github/workflows/reusable-build-docker.yaml
+    needs: test
+    with:
+      image: ${{ inputs.image }}
+      image-tag: canary-${{ github.sha }}
+      service-account: ${{ inputs.service-account-build }}
+      slack-ts: ${{ needs.test.outputs.ts }}
+      slack-before-message: "${{ needs.test.outputs.message }}\\n:truck: Building container image... :spinner:"
+      slack-after-message: "${{ needs.test.outputs.message }}\\n:truck: Container image built successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-build }}
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-build }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  deploy-to-dev:
+    name: Dev
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs: build
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: ${{ inputs.service-account-dev }}
+      cluster-name: ${{ inputs.cluster-name-dev }}
+      location: ${{ inputs.cluster-location-dev }}
+      namespace: ${{ inputs.cluster-namespace-dev }}
+      manifest-dir: ${{ inputs.manifest-dir-dev }}
+      slack-ts: ${{ needs.build.outputs.ts }}
+      slack-before-message: "${{ needs.build.outputs.message }}\\n:rocket: Deploying to development environment... :spinner:"
+      slack-after-message: "${{ needs.build.outputs.message }}\\n:rocket: Deployed to development environment successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-dev }}
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-dev }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  deploy-canary-to-prod:
+    name: Prod canary
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs:
+    - build
+    - deploy-to-dev
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: ${{ inputs.service-account-prod }}
+      cluster-name: ${{ inputs.cluster-name-prod }}
+      location: ${{ inputs.cluster-location-prod }}
+      namespace: ${{ inputs.cluster-namespace-prod }}
+      manifest-dir: ${{ inputs.manifest-dir-prod }}
+      strategy: canary
+      canary-percentage: ${{ inputs.canary-percentage }}
+      slack-ts: ${{ needs.deploy-to-dev.outputs.ts }}
+      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deploying canary to 50% of production environment... :spinner:"
+      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deployed canary to 50% of production environment."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-prod }}
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-prod }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  observe-metrics:
+    name: Observe prod metrics
+    uses: ./.github/workflows/reusable-observe-metrics.yaml
+    needs: deploy-canary-to-prod
+    with:
+      slack-ts: ${{ needs.deploy-canary-to-prod.outputs.ts }}
+      slack-before-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:mag: Analyzing production metrics... :spinner:"
+      slack-after-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:mag: Production metrics analyzed."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-prod }}
+    secrets:
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  promote-canary-to-prod:
+    name: Promote prod canary
+    if: needs.observe-metrics.outputs.healthy == 'true'
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs:
+    - build
+    - observe-metrics
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: ${{ inputs.service-account-prod }}
+      cluster-name: ${{ inputs.cluster-name-prod }}
+      location: ${{ inputs.cluster-location-prod }}
+      namespace: ${{ inputs.cluster-namespace-prod }}
+      manifest-dir: ${{ inputs.manifest-dir-prod }}
+      strategy: canary-promote
+      slack-ts: ${{ needs.observe-metrics.outputs.ts }}
+      slack-before-message: "${{ needs.observe-metrics.outputs.message }}\\n:astronaut: Deploying to 100% of production environment... :spinner:"
+      slack-after-message: "${{ needs.observe-metrics.outputs.message }}\\n:astronaut: Deployed to 100% of production environment successfully."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-prod }}
+      is-last-job: true
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-prod }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
+
+  reject-canary-in-prod:
+    name: Reject prod canary
+    if: needs.observe-metrics.outputs.healthy == 'false'
+    uses: ./.github/workflows/reusable-deploy.yaml
+    needs:
+    - build
+    - observe-metrics
+    with:
+      image: ${{ needs.build.outputs.image }}
+      service-account: ${{ inputs.service-account-prod }}
+      cluster-name: ${{ inputs.cluster-name-prod }}
+      location: ${{ inputs.cluster-location-prod }}
+      namespace: ${{ inputs.cluster-namespace-prod }}
+      manifest-dir: ${{ inputs.manifest-dir-prod }}
+      strategy: canary-reject
+      slack-ts: ${{ needs.observe-metrics.outputs.ts }}
+      slack-before-message: "${{ needs.observe-metrics.outputs.message }}\\n:no_good: Rejecting canary release... :spinner:"
+      slack-after-message: "${{ needs.observe-metrics.outputs.message }}\\n:no_good: Canary release rejected."
+      slack-channel-id: ${{ inputs.slack-channel-id }}
+      environment: ${{ inputs.gha-environment-prod }}
+      is-last-job: true
+    secrets:
+      workload-identity-provider: ${{ secrets.workload-identity-provider-prod }}
+      slack-bot-token: ${{ secrets.slack-bot-token }}
