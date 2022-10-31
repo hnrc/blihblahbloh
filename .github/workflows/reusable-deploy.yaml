@@ -52,6 +52,10 @@ on:
         required: false
         type: string
         default: pod
+      is-last-job:
+        required: false
+        type: boolean
+        default: false
     secrets:
       workload-identity-provider:
         required: true
@@ -187,3 +191,4 @@ jobs:
         slack-bot-token: ${{ secrets.slack-bot-token }}
         ts: ${{ steps.slack-before.outputs.ts }}
         message: ${{ steps.set-approver-after.outputs.replaced }}
+        workflow-finished: ${{ inputs.is-last-job }}

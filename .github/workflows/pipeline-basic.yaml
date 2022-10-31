@@ -90,6 +90,7 @@ jobs:
       slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:vertical_traffic_light: Production deploy approved by *@:APPROVER:*.\\n:astronaut: Deployed to production environment successfully."
       slack-channel-id: C047725Q8VA
       environment: production
+      is-last-job: true
     secrets:
       workload-identity-provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}

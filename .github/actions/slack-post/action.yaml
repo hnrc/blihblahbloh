@@ -10,6 +10,9 @@ inputs:
   ts:
     required: false
     default: ''
+  workflow-finished:
+    required: false
+    default: 'false'
 
 outputs:
   ts:
@@ -22,6 +25,9 @@ runs:
   steps:
   - name: Add SHORT_SHA env property with commit short sha
     run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
+    shell: bash
+  - name: Add WORKFLOW_STATUS env property with workflow status
+    run: echo "WORKFLOW_STATUS=$(if [ '${{ inputs.workflow-finished }}' = 'true' ]; then echo 'Finished'; else echo 'Running'; fi)" >> $GITHUB_ENV
     shell: bash
   - name: Post to a Slack channel
     id: slack
@@ -36,7 +42,7 @@ runs:
               "type": "section",
               "text": {
                 "type": "mrkdwn",
-                "text": "*Deploy pipeline:*\n${{ inputs.message }}"
+                "text": "*Deploy pipeline: `${{ github.repository }}`*\n${{ inputs.message }}"
               }
             },
             {
@@ -44,7 +50,7 @@ runs:
               "elements": [
                 {
                   "type": "mrkdwn",
-                  "text": "*Repo:* ${{ github.event.repository.name }} *Commit:* ${{ env.SHORT_SHA }} *User:* ${{ github.actor }}"
+                  "text": "*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ env.SHORT_SHA }}>  *Triggered by:* <${{ github.server_url }}/${{ github.actor }}|${{ github.actor }}>  *Status:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ env.WORKFLOW_STATUS }}>"
                 }
               ]
             }
