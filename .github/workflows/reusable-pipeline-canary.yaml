@@ -144,8 +144,8 @@ jobs:
       strategy: canary
       canary-percentage: ${{ inputs.canary-percentage }}
       slack-ts: ${{ needs.deploy-to-dev.outputs.ts }}
-      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deploying canary to 50% of production environment... :spinner:"
-      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deployed canary to 50% of production environment."
+      slack-before-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deploying canary to ${{ inputs.canary-percentage }}% of production environment... :spinner:"
+      slack-after-message: "${{ needs.deploy-to-dev.outputs.message }}\\n:parrot: Deployed canary to ${{ inputs.canary-percentage }}% of production environment."
       slack-channel-id: ${{ inputs.slack-channel-id }}
       environment: ${{ inputs.gha-environment-prod }}
     secrets:
