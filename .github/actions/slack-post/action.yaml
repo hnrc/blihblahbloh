@@ -27,7 +27,7 @@ runs:
     run: echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-7`" >> $GITHUB_ENV
     shell: bash
   - name: Add WORKFLOW_STATUS env property with workflow status
-    run: echo "WORKFLOW_STATUS=$(if [ '${{ inputs.workflow-finished }}' = 'true' ]; then echo 'Finished'; else echo 'In progress'; fi)" >> $GITHUB_ENV
+    run: echo "WORKFLOW_STATUS=$(if [ '${{ inputs.workflow-finished }}' = 'true' ]; then echo 'Finished'; else echo 'Running'; fi)" >> $GITHUB_ENV
     shell: bash
   - name: Post to a Slack channel
     id: slack
