@@ -29,6 +29,13 @@ runs:
   - name: Add WORKFLOW_STATUS env property with workflow status
     run: echo "WORKFLOW_STATUS=$(if [ '${{ inputs.workflow-finished }}' = 'true' ]; then echo 'Finished'; else echo 'Running'; fi)" >> $GITHUB_ENV
     shell: bash
+  - id: sanitized-commit-message
+    uses: actions/github-script@v6.3.3
+    env:
+      COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+    with:
+      script: return process.env.COMMIT_MESSAGE.replace(/\n/g, '\\n');
+      result-encoding: string
   - name: Post to a Slack channel
     id: slack
     uses: slackapi/slack-github-action@v1.23.0
@@ -42,7 +49,7 @@ runs:
               "type": "section",
               "text": {
                 "type": "mrkdwn",
-                "text": "*Deploy pipeline: `${{ github.repository }}`*\n${{ inputs.message }}"
+                "text": "*Deploy pipeline: `${{ github.repository }}`*\n```\n${{ steps.sanitized-commit-message.outputs.result }}\n```\n${{ inputs.message }}"
               }
             },
             {
