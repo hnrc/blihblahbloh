@@ -58,7 +58,10 @@ jobs:
         ts: ${{ inputs.slack-ts }}
 
     - name: Gathering metrics
-      run: echo "Gathering metrics from observability system (mock)"; sleep 30;
+      run: |
+        echo "Gathering metrics from observability system (mock)";
+        echo "Metrics: ${{ inputs.metrics }}";
+        sleep 30;
 
     - name: Evaluating metrics
       id: evaluation

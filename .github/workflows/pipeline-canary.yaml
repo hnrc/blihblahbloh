@@ -27,6 +27,7 @@ jobs:
       cluster-namespace-prod: prod
       cluster-location-prod: europe-north1
       cluster-name-prod: autopilot-cluster-1
+      observed_metrics: foo.error_rate<0.1, foo.avg_latency<50
     secrets:
       slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
       workload-identity-provider-build: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}

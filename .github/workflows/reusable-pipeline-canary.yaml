@@ -64,6 +64,10 @@ on:
         required: false
         type: string
         default: production
+      observed_metrics:
+        required: false
+        type: string
+        default: ''
     secrets:
       slack-bot-token:
         required: false
@@ -158,6 +162,7 @@ jobs:
       slack-after-message: "${{ needs.deploy-canary-to-prod.outputs.message }}\\n:mag: Production metrics analyzed."
       slack-channel-id: ${{ inputs.slack-channel-id }}
       environment: ${{ inputs.gha-environment-prod }}
+      metrics: ${{ inputs.observed_metrics }}
     secrets:
       slack-bot-token: ${{ secrets.slack-bot-token }}
 
