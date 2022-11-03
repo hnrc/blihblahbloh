@@ -74,7 +74,7 @@ This is what it all pretty much bubbles down to:
 
 ### Commits to the main branch trigger the deploy pipeline which takes it all the way to production
 
-This effectively means that **all** changes, small or big, go out in production minutes after they have been merged.
+The state of the main branch should at any given time reflect what's running in production. This effectively means that **all** changes, small or big, go out in production minutes after they have been merged.
 
 Some of the neat effects of this are that:
 * The **feedback loop from code merge to production is as short as it can possibly be**, within reason, which has many great effects in itself.
@@ -148,12 +148,6 @@ A few examples can be:
 * Other third-party runtimes
 
 It's common for organizations to have different tools (and therefore workflows) for these different use cases, which is not great. What we want is to have **the same CI/CD experience regardless of deploy target**.
-
-
-<!--
-* Reusable workflows, inputs outputs
-* Ref to what Charity Majors said in bla bla
--->
 
 ## :notebook: Frequently asked questions
 
