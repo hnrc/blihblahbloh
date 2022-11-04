@@ -1,7 +1,7 @@
 # <img align="left" src="./images/chatbot.png" width="85" /> blip blop blip blop
 ###### _Opinionated yet flexible reusable Github Actions workflows built for an extraordinary developer experience._
 
-This serves both as a showcase of what I consider to be an **extraordinarily good CI/CD developer experience** and as a reference **implementation of said experience**, using GitHub Actions as the underlying engine.
+This serves both as a showcase of what I, after many years of experimenting and observing the development in the industry, consider to be an **extraordinarily good CI/CD developer experience** and as a reference **implementation of said experience**, using GitHub Actions as the underlying engine.
 
 The reference implementation uses Google Cloud as the cloud provider and Google Kubernetes Engine as the container orchestrator, but that's a minor detail. The same flow and developer experience can be implemented regardless of the cloud provider or where the code ends up running.
 
