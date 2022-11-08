@@ -169,7 +169,7 @@ Reusable workflows make it possible to scale this approach to hundreds and thous
 
 #### _"– Meh, we're not using Github."_
 
-Keep in mind that this is just a reference implementation. It's very possibly to port this to e.g. GitLab's CI/CD if you're on GitLab, or maybe CircleCI if you're into that.
+Keep in mind that this is just a reference implementation. It's very possibly to port this to e.g. GitLab's CI/CD if you're on GitLab, or maybe CircleCI if you're into that. I haven't tried but I assume it's also possible to implement this with Argo Workflows.
 
 ## :raised_hands: Acknowledgments
 
